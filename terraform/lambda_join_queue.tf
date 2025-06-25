@@ -64,9 +64,6 @@ resource "aws_iam_role_policy_attachment" "join_queue_lambda_attachment" {
   policy_arn = aws_iam_policy.join_queue_lambda_policy.arn
 }
 
-# ------------------------------------------------------------------------------
-# LAMBDA FUNCTION RESOURCE
-# ------------------------------------------------------------------------------
 resource "aws_lambda_function" "join_queue_function" {
   function_name = "join-queue-function"
   role          = aws_iam_role.join_queue_lambda_role.arn
@@ -84,4 +81,29 @@ resource "aws_lambda_function" "join_queue_function" {
       SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id # .id is the URL for SQS queues
     }
   }
+}
+
+resource "aws_apigatewayv2_integration" "join_queue_lambda_integration" {
+  api_id           = aws_apigatewayv2_api.waiting_room_api.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri = aws_lambda_function.join_queue_function.invoke_arn
+
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "join_queue_route" {
+  api_id    = aws_apigatewayv2_api.waiting_room_api.id
+  route_key = "POST /join"
+  target    = "integrations/${aws_apigatewayv2_integration.join_queue_lambda_integration.id}"
+}
+
+
+resource "aws_lambda_permission" "api_gateway_invoke_permission" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.join_queue_function.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.waiting_room_api.execution_arn}/*/${aws_apigatewayv2_route.join_queue_route.route_key}"
 }
