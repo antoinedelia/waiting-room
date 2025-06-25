@@ -14,7 +14,6 @@ ssm = boto3.client("ssm")
 
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME")
 QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
-PARAMETER_NAME = os.environ.get("SSM_PARAMETER_NAME")
 TOKEN_EXPIRATION_MINUTES = 240
 
 
@@ -31,21 +30,6 @@ def lambda_handler(event, context):
             "statusCode": 500,
             "body": json.dumps({"error": "Environment variables not configured."}),
         }
-
-    parameter = ssm.get_parameter(Name=PARAMETER_NAME)
-    is_waiting_room_enabled = parameter["Parameter"]["Value"].lower() == "true"
-
-    # If waiting room is OFF, grant direct access
-    if not is_waiting_room_enabled:
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"status": "DIRECT_ACCESS"}),
-        }
-
     try:
         # 1. Generate a unique token
         user_token = str(uuid.uuid4())

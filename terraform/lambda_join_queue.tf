@@ -77,7 +77,6 @@ resource "aws_lambda_function" "join_queue_function" {
     variables = {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.waiting_room_table.name
       SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id
-      SSM_PARAMETER_NAME  = aws_ssm_parameter.waiting_room_enabled.name
     }
   }
 }
