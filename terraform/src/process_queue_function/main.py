@@ -54,10 +54,9 @@ def lambda_handler(event, context):
                 table.update_item(
                     Key={"token": token},
                     UpdateExpression="set #s = :s",
-                    ExpressionAttributeNames={"#s": "status"},
+                    ConditionExpression="attribute_exists(#t)",
+                    ExpressionAttributeNames={"#s": "status", "#t": "token"},
                     ExpressionAttributeValues={":s": "ALLOWED"},
-                    # Condition to ensure we only update if the item still exists
-                    ConditionExpression="attribute_exists(token)",
                 )
                 print(f"Successfully updated status for token: {token}")
 
