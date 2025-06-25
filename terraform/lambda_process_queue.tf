@@ -73,7 +73,7 @@ resource "aws_lambda_function" "process_queue_function" {
     variables = {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.waiting_room_table.name
       SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id
-      USERS_TO_PROCESS    = "100" # Let in 100 users per minute
+      USERS_TO_PROCESS    = "10"
     }
   }
 }

@@ -8,7 +8,7 @@ sqs = boto3.client("sqs")
 
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME")
 QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
-USERS_TO_PROCESS = int(os.environ.get("USERS_TO_PROCESS", 100))
+USERS_TO_PROCESS = int(os.environ.get("USERS_TO_PROCESS", 10))
 
 
 def lambda_handler(event, context):
