@@ -72,13 +72,6 @@ resource "aws_lambda_function" "gatekeeper_function" {
   runtime       = "python3.13"
   publish       = true # MUST publish a version to use with Lambda@Edge
 
-  environment {
-    variables = {
-      SSM_PARAMETER_NAME          = aws_ssm_parameter.waiting_room_enabled.name
-      CLOUDFRONT_WAITING_ROOM_URL = "https://${aws_cloudfront_distribution.waiting_room_distribution.domain_name}"
-    }
-  }
-
   filename         = data.archive_file.gatekeeper_lambda_zip.output_path
   source_code_hash = data.archive_file.gatekeeper_lambda_zip.output_base64sha256
 }
