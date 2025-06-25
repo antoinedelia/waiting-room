@@ -1,7 +1,7 @@
 resource "aws_dynamodb_table" "waiting_room_table" {
-  name           = "WaitingRoom"
-  billing_mode   = "PAY_PER_REQUEST" # Good for unpredictable traffic
-  hash_key       = "token"
+  name         = "WaitingRoom"
+  billing_mode = "PAY_PER_REQUEST" # Good for unpredictable traffic
+  hash_key     = "token"
 
   attribute {
     name = "token"
