@@ -76,12 +76,6 @@ resource "aws_lambda_function" "process_queue_function" {
       USERS_TO_PROCESS    = "100" # Let in 100 users per minute
     }
   }
-
-  tags = {
-    Name      = "ProcessQueueFunction"
-    Project   = "VirtualWaitingRoom"
-    ManagedBy = "Terraform"
-  }
 }
 
 resource "aws_cloudwatch_event_rule" "process_queue_schedule" {
