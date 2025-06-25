@@ -37,7 +37,6 @@ jobs:
             -backend-config="bucket=${{ secrets.TF_BUCKET }}" \
             -backend-config="key=${{ secrets.TF_STATE_KEY }}" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true"
 
       - name: Terraform Validate
         working-directory: ./terraform
