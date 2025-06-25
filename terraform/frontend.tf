@@ -79,12 +79,6 @@ resource "aws_cloudfront_distribution" "frontend_distribution" {
   viewer_certificate {
     cloudfront_default_certificate = true
   }
-
-  tags = {
-    Name      = "FrontendDistribution"
-    Project   = "VirtualWaitingRoom"
-    ManagedBy = "Terraform"
-  }
 }
 
 output "website_url" {
