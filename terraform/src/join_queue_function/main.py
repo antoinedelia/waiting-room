@@ -4,6 +4,7 @@ import json
 import os
 import time
 import uuid
+from decimal import Decimal
 
 import boto3
 
@@ -51,6 +52,16 @@ def lambda_handler(event, context):
 
         # 2. Create an item in DynamoDB
         table = dynamodb.Table(TABLE_NAME)
+
+        # Atomically increment the counter to get the next ticket number
+        counter_response = table.update_item(
+            Key={"token": "counter"},
+            UpdateExpression="SET ticketValue = if_not_exists(ticketValue, :start) + :inc",
+            ExpressionAttributeValues={":inc": Decimal(1), ":start": Decimal(0)},
+            ReturnValues="UPDATED_NEW",
+        )
+        ticket_number = int(counter_response["Attributes"]["ticketValue"])
+
         current_time = int(time.time())
         # Set a TTL for the item to be auto-deleted after some time
         expires_at = current_time + (TOKEN_EXPIRATION_MINUTES * 60)
@@ -59,6 +70,7 @@ def lambda_handler(event, context):
             Item={
                 "token": user_token,
                 "status": "WAITING",
+                "ticketNumber": ticket_number,
                 "createdAt": current_time,
                 "expiresAt": expires_at,
             }
@@ -66,7 +78,10 @@ def lambda_handler(event, context):
 
         # 3. Send a message to SQS
         sqs.send_message(
-            QueueUrl=QUEUE_URL, MessageBody=json.dumps({"token": user_token})
+            QueueUrl=QUEUE_URL,
+            MessageBody=json.dumps(
+                {"token": user_token, "ticketNumber": ticket_number}
+            ),
         )
 
         # 4. Return the token to the client

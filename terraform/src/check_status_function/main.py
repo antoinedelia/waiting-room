@@ -37,13 +37,38 @@ def lambda_handler(event, context):
                 "body": json.dumps({"error": "Token not found or expired."}),
             }
 
+        status = item.get("status", "UNKNOWN")
+
+        if status == "ALLOWED":
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "ALLOWED"}),
+            }
+
+        if status == "WAITING":
+            user_ticket = int(item.get("ticketNumber", 0))
+
+            # 2. Get the central counter item to find out who is being served
+            counter_response = table.get_item(Key={"token": "counter"})
+            counter_item = counter_response.get("Item", {})
+            now_serving = int(counter_item.get("nowServing", 0))
+
+            # 3. Calculate the position
+            position = user_ticket - now_serving
+            if position < 0:
+                position = 0
+
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"status": "WAITING", "position": position}),
+            }
+
         return {
             "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-            },
-            "body": json.dumps({"status": item.get("status", "UNKNOWN")}),
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": status}),
         }
 
     except Exception as e:

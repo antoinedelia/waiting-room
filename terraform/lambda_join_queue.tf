@@ -11,7 +11,6 @@ data "archive_file" "join_queue_lambda_zip" {
 resource "aws_iam_role" "join_queue_lambda_role" {
   name = "JoinQueueLambdaRole"
 
-  # Trust policy that allows Lambda to assume this role
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -33,19 +32,19 @@ resource "aws_iam_policy" "join_queue_lambda_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        # Permission to write to the DynamoDB table
-        Effect   = "Allow",
-        Action   = "dynamodb:PutItem",
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem"
+        ],
         Resource = aws_dynamodb_table.waiting_room_table.arn
       },
       {
-        # Permission to send messages to the SQS queue
         Effect   = "Allow",
         Action   = "sqs:SendMessage",
         Resource = aws_sqs_queue.waiting_room_queue.arn
       },
       {
-        # Permission to write logs to CloudWatch
         Effect = "Allow",
         Action = [
           "logs:CreateLogGroup",
@@ -53,12 +52,6 @@ resource "aws_iam_policy" "join_queue_lambda_policy" {
           "logs:PutLogEvents"
         ],
         Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        # Permission to get SSM Parameter
-        Effect   = "Allow",
-        Action   = "ssm:GetParameter",
-        Resource = aws_ssm_parameter.waiting_room_enabled.arn
       }
     ]
   })
@@ -74,7 +67,6 @@ resource "aws_lambda_function" "join_queue_function" {
   function_name = "join-queue-function"
   role          = aws_iam_role.join_queue_lambda_role.arn
 
-  # Reference the zip file we created above
   filename         = data.archive_file.join_queue_lambda_zip.output_path
   source_code_hash = data.archive_file.join_queue_lambda_zip.output_base64sha256
 
@@ -84,7 +76,7 @@ resource "aws_lambda_function" "join_queue_function" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.waiting_room_table.name
-      SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id # .id is the URL for SQS queues
+      SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id
       SSM_PARAMETER_NAME  = aws_ssm_parameter.waiting_room_enabled.name
     }
   }

@@ -1,5 +1,6 @@
 import json
 import os
+from decimal import Decimal
 
 import boto3
 
@@ -40,6 +41,7 @@ def lambda_handler(event, context):
         print(f"Received {len(messages)} messages to process.")
         table = dynamodb.Table(TABLE_NAME)
         delete_entries = []
+        last_ticket_processed = 0
 
         for message in messages:
             message_body = json.loads(message["Body"])
@@ -59,6 +61,11 @@ def lambda_handler(event, context):
                     ExpressionAttributeValues={":s": "ALLOWED"},
                 )
                 print(f"Successfully updated status for token: {token}")
+
+                # Keep track of the highest ticket number we processed
+                ticket_num = int(message_body.get("ticketNumber", 0))
+                if ticket_num > last_ticket_processed:
+                    last_ticket_processed = ticket_num
 
                 # If the update was successful, add the message to be deleted
                 delete_entries.append(
@@ -82,6 +89,15 @@ def lambda_handler(event, context):
             except Exception as e:
                 print(f"Error updating DynamoDB for token {token}: {e}")
                 # Don't delete the message, let it be reprocessed later
+
+        # After processing the batch, update the 'nowServing' counter
+        if last_ticket_processed > 0:
+            table.update_item(
+                Key={"token": "counter"},
+                UpdateExpression="SET nowServing = :val",
+                ExpressionAttributeValues={":val": Decimal(last_ticket_processed)},
+            )
+            print(f"Updated nowServing to: {last_ticket_processed}")
 
         # 3. Delete the processed messages from SQS in a batch
         if delete_entries:
