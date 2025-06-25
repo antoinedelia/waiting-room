@@ -1,3 +1,4 @@
+import json
 import os
 import time
 
@@ -5,8 +6,12 @@ import boto3
 
 ssm = boto3.client("ssm", region_name="eu-west-1")
 
-PARAMETER_NAME = os.environ.get("SSM_PARAMETER_NAME")
-WAITING_ROOM_URL = os.environ.get("CLOUDFRONT_WAITING_ROOM_URL")
+config_path = os.path.join(os.path.dirname(__file__), "config.json")
+with open(config_path) as f:
+    config = json.load(f)
+
+PARAMETER_NAME = config["ssm_parameter_name"]
+WAITING_ROOM_URL = config["waiting_room_url"]
 
 cached_response = {
     "enabled": None,

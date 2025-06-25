@@ -1,7 +1,22 @@
+# This resource creates a config.json file on the local filesystem where
+# terraform is being run. This file will be included in the Lambda zip.
+# This is to overcome the limitation of Lambda@Edge that cannot have environment variables.
+resource "local_file" "gatekeeper_lambda_config" {
+  content = jsonencode({
+    ssm_parameter_name = aws_ssm_parameter.waiting_room_enabled.name
+    waiting_room_url   = "https://${aws_cloudfront_distribution.waiting_room_distribution.domain_name}"
+  })
+  filename = "${path.module}/src/gatekeeper_function/config.json"
+}
+
 data "archive_file" "gatekeeper_lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/src/gatekeeper_function"
   output_path = "${path.module}/dist/gatekeeper_function.zip"
+
+  depends_on = [
+    local_file.gatekeeper_lambda_config
+  ]
 }
 
 resource "aws_iam_role" "gatekeeper_lambda_role" {
