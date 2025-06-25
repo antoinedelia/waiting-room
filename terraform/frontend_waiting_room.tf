@@ -41,7 +41,7 @@ resource "aws_s3_bucket_policy" "waiting_room_bucket_policy" {
 resource "aws_cloudfront_distribution" "waiting_room_distribution" {
   origin {
     domain_name = aws_s3_bucket.waiting_room_bucket.bucket_regional_domain_name
-    origin_id   = "S3-${aws_s3_bucket.frontend_bucket.id}"
+    origin_id   = "S3-${aws_s3_bucket.waiting_room_bucket.id}"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.waiting_room_oai.cloudfront_access_identity_path
@@ -55,7 +55,7 @@ resource "aws_cloudfront_distribution" "waiting_room_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.frontend_bucket.id}"
+    target_origin_id = "S3-${aws_s3_bucket.waiting_room_bucket.id}"
 
     forwarded_values {
       query_string = false

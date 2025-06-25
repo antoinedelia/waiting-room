@@ -60,7 +60,7 @@ resource "aws_lambda_function" "gatekeeper_function" {
   environment {
     variables = {
       SSM_PARAMETER_NAME          = aws_ssm_parameter.waiting_room_enabled.name
-      CLOUDFRONT_WAITING_ROOM_URL = "https://${aws_cloudfront_distribution.frontend_distribution.domain_name}"
+      CLOUDFRONT_WAITING_ROOM_URL = "https://${aws_cloudfront_distribution.waiting_room_distribution.domain_name}"
     }
   }
 
