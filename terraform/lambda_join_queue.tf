@@ -53,6 +53,12 @@ resource "aws_iam_policy" "join_queue_lambda_policy" {
           "logs:PutLogEvents"
         ],
         Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        # Permission to get SSM Parameter
+        Effect   = "Allow",
+        Action   = "ssm:GetParameter",
+        Resource = aws_ssm_parameter.waiting_room_enabled.arn
       }
     ]
   })
@@ -79,6 +85,7 @@ resource "aws_lambda_function" "join_queue_function" {
     variables = {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.waiting_room_table.name
       SQS_QUEUE_URL       = aws_sqs_queue.waiting_room_queue.id # .id is the URL for SQS queues
+      SSM_PARAMETER_NAME  = aws_ssm_parameter.waiting_room_enabled.name
     }
   }
 }
