@@ -54,7 +54,12 @@ resource "aws_cloudfront_distribution" "main_website_distribution" {
 
     forwarded_values {
       query_string = false
-      cookies { forward = "none" }
+      headers      = ["Origin"]
+
+      cookies {
+        forward           = "whitelist"
+        whitelisted_names = ["waiting-room-pass"]
+      }
     }
 
     lambda_function_association {
