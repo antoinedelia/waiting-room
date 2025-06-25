@@ -66,7 +66,7 @@ resource "aws_lambda_function" "process_queue_function" {
   source_code_hash = data.archive_file.process_queue_lambda_zip.output_base64sha256
 
   handler = "main.lambda_handler"
-  runtime = "python3.3"
+  runtime = "python3.13"
   timeout = 30
 
   environment {
