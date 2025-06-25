@@ -1,0 +1,51 @@
+name: 'Deploy Terraform to AWS'
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: "eu-west-1"
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform fmt -check -recursive -diff
+        run: terraform validate
+        run: tflint --recursive
+
+      - name: Terraform Plan
+        working-directory: ./terraform
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
+
