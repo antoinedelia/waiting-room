@@ -153,7 +153,7 @@
                     const redirectUrl = new URL(MAIN_WEBSITE_URL);
                     redirectUrl.searchParams.set('pass_token', data.jwt);
 
-                    setTimeout(() => { window.location.href = MAIN_WEBSITE_URL; }, 2000);
+                    setTimeout(() => { window.location.href = redirectUrl; }, 2000);
 
                 } else if (data.status === 'WAITING') {
                     positionDisplay.textContent = data.position;
