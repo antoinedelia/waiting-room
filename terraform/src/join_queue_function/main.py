@@ -1,5 +1,3 @@
-# terraform/src/join_queue_function/main.py
-
 import json
 import os
 import time
@@ -10,7 +8,6 @@ import boto3
 
 dynamodb = boto3.resource("dynamodb")
 sqs = boto3.client("sqs")
-ssm = boto3.client("ssm")
 
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME")
 QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
@@ -20,10 +17,10 @@ TOKEN_EXPIRATION_MINUTES = 240
 def lambda_handler(event, context):
     """
     Handles a new user joining the waiting room.
-    1. Generates a unique token.
-    2. Creates an item in DynamoDB with status 'WAITING'.
-    3. Sends a message to SQS with the token.
-    4. Returns the token to the client.
+    1. Atomically increments a counter in DynamoDB to get a ticket number.
+    2. Creates an item for the user with their ticket number.
+    3. Sends a message to the FIFO SQS queue with a MessageGroupId.
+    4. Returns the unique token to the client.
     """
     if not TABLE_NAME or not QUEUE_URL:
         return {
@@ -31,13 +28,11 @@ def lambda_handler(event, context):
             "body": json.dumps({"error": "Environment variables not configured."}),
         }
     try:
-        # 1. Generate a unique token
-        user_token = str(uuid.uuid4())
-
-        # 2. Create an item in DynamoDB
         table = dynamodb.Table(TABLE_NAME)
 
-        # Atomically increment the counter to get the next ticket number
+        # 1. Atomically increment the central counter to get the next ticket number.
+        #    This ensures each user gets a unique, sequential number.
+        #    'if_not_exists' initializes the counter if it's the very first user.
         counter_response = table.update_item(
             Key={"token": "counter"},
             UpdateExpression="SET ticketValue = if_not_exists(ticketValue, :start) + :inc",
@@ -46,8 +41,9 @@ def lambda_handler(event, context):
         )
         ticket_number = int(counter_response["Attributes"]["ticketValue"])
 
+        # 2. Create a unique record for the user in the DynamoDB table.
+        user_token = str(uuid.uuid4())
         current_time = int(time.time())
-        # Set a TTL for the item to be auto-deleted after some time
         expires_at = current_time + (TOKEN_EXPIRATION_MINUTES * 60)
 
         table.put_item(
@@ -60,15 +56,18 @@ def lambda_handler(event, context):
             }
         )
 
-        # 3. Send a message to SQS
+        # 3. Send a message to the SQS FIFO queue.
         sqs.send_message(
             QueueUrl=QUEUE_URL,
             MessageBody=json.dumps(
                 {"token": user_token, "ticketNumber": ticket_number}
             ),
+            # This is REQUIRED for FIFO queues. All messages in our queue can
+            # belong to the same group to ensure they are processed sequentially.
+            MessageGroupId="waiting-room-group",
         )
 
-        # 4. Return the token to the client
+        # 4. Return the unique token to the user's browser.
         return {
             "statusCode": 200,
             "headers": {
@@ -79,7 +78,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"An unexpected error occurred: {e}")
         return {
             "statusCode": 500,
             "body": json.dumps({"error": "An internal error occurred."}),
