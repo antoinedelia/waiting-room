@@ -36,9 +36,10 @@ jobs:
 
       - name: Terraform Validate
         working-directory: ./terraform
-        run: terraform fmt -check -recursive -diff
-        run: terraform validate
-        run: tflint --recursive
+        run: |
+          terraform fmt -check -recursive -diff
+          terraform validate
+          tflint --recursive
 
       - name: Terraform Plan
         working-directory: ./terraform
