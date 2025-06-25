@@ -64,7 +64,12 @@
         <!-- Waiting State -->
         <div id="waiting-view" class="hidden">
             <h1 class="text-2xl font-bold text-slate-800 mb-4">You are in the queue</h1>
-            <p class="text-slate-600 mb-8">Please wait, we will let you in shortly. Thank you for your patience.</p>
+            <p class="text-slate-600 mb-6">Please wait, we will let you in shortly. Thank you for your patience.</p>
+            <!-- Position Display -->
+            <div id="position-container" class="my-6">
+                <p class="text-lg text-slate-700">Your position in queue is:</p>
+                <p id="position-display" class="text-4xl font-bold text-indigo-600">...</p>
+            </div>
             <div class="flex justify-center items-center h-10">
                 <div class="dot-flashing"></div>
             </div>
@@ -89,24 +94,23 @@
         const allowedView = document.getElementById('allowed-view');
         const joinButton = document.getElementById('join-button');
         const tokenDisplay = document.getElementById('token-display');
+        const positionDisplay = document.getElementById('position-display');
         let statusInterval;
 
         joinButton.addEventListener('click', async () => {
-            try {
-                // 1. Call the /join endpoint
+             try {
                 const response = await fetch(`${API_ENDPOINT}/join`, { method: 'POST' });
                 if (!response.ok) throw new Error('Failed to join queue');
                 
                 const data = await response.json();
                 const token = data.token;
                 
-                // Store token and switch view
                 sessionStorage.setItem('waiting_room_token', token);
                 tokenDisplay.textContent = token;
                 showWaitingView();
 
-                // 2. Start polling for status
-                statusInterval = setInterval(() => checkStatus(token), 3000); // Check every 3 seconds
+                // Start polling for status
+                statusInterval = setInterval(() => checkStatus(token), 5000); // Check every 5 seconds
 
             } catch (error) {
                 console.error('Error joining queue:', error);
@@ -130,20 +134,17 @@
 
                 const data = await response.json();
 
-                // 3. Check the status and react
                 if (data.status === 'ALLOWED') {
                     clearInterval(statusInterval);
                     showAllowedView();
-                    // Redirect to the actual application after a short delay
                     setTimeout(() => {
                         window.location.href = 'https://aws.amazon.com/'; // Dummy redirect
                     }, 2000);
+                } else if (data.status === 'WAITING') {
+                    positionDisplay.textContent = data.position;
                 }
-                // If status is still 'WAITING', do nothing and let the interval continue.
-
             } catch (error) {
                 console.error('Error checking status:', error);
-                // We don't clear interval here, to allow for transient network errors
             }
         }
         
@@ -165,17 +166,15 @@
             allowedView.classList.remove('hidden');
         }
 
-        // Check if user was already waiting on page refresh
         window.onload = () => {
             const existingToken = sessionStorage.getItem('waiting_room_token');
             if (existingToken) {
                 tokenDisplay.textContent = existingToken;
                 showWaitingView();
                 checkStatus(existingToken); // Do an initial check immediately
-                statusInterval = setInterval(() => checkStatus(existingToken), 3000);
+                statusInterval = setInterval(() => checkStatus(existingToken), 5000);
             }
         };
-
     </script>
 </body>
 </html>
