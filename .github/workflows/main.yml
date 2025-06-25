@@ -56,7 +56,7 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ./terraform
-        run: terraform plan -no-color
+        run: terraform plan
 
       - name: Terraform Apply
         working-directory: ./terraform
