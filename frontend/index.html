@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waiting Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .dot-flashing {
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #4f46e5;
+            color: #4f46e5;
+            animation: dotFlashing 1s infinite linear alternate;
+            animation-delay: .5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+        .dot-flashing::before {
+            left: -15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #4f46e5;
+            color: #4f46e5;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+        .dot-flashing::after {
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #4f46e5;
+            color: #4f46e5;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+        @keyframes dotFlashing {
+            0% { background-color: #4f46e5; }
+            50%, 100% { background-color: rgba(79, 70, 229, 0.2); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+    <div id="container" class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+        <!-- Initial State -->
+        <div id="initial-view">
+            <h1 class="text-2xl font-bold text-slate-800 mb-4">You are in the queue</h1>
+            <p class="text-slate-600 mb-6">Due to high demand, we've placed you in a virtual waiting room. Please don't refresh this page.</p>
+            <button id="join-button" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors w-full">
+                Click to Enter Queue
+            </button>
+        </div>
+
+        <!-- Waiting State -->
+        <div id="waiting-view" class="hidden">
+            <h1 class="text-2xl font-bold text-slate-800 mb-4">You are in the queue</h1>
+            <p class="text-slate-600 mb-8">Please wait, we will let you in shortly. Thank you for your patience.</p>
+            <div class="flex justify-center items-center h-10">
+                <div class="dot-flashing"></div>
+            </div>
+            <p class="text-sm text-slate-500 mt-8">Your token: <span id="token-display" class="font-mono text-xs"></span></p>
+        </div>
+        
+        <!-- Allowed State -->
+        <div id="allowed-view" class="hidden">
+             <h1 class="text-2xl font-bold text-green-600 mb-4">You're in!</h1>
+             <p class="text-slate-600 mb-6">Thank you for waiting. You are now being redirected to the main site.</p>
+             <svg class="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = 'https://c305xzvm7c.execute-api.eu-west-1.amazonaws.com/v1'; 
+
+        const initialView = document.getElementById('initial-view');
+        const waitingView = document.getElementById('waiting-view');
+        const allowedView = document.getElementById('allowed-view');
+        const joinButton = document.getElementById('join-button');
+        const tokenDisplay = document.getElementById('token-display');
+        let statusInterval;
+
+        joinButton.addEventListener('click', async () => {
+            try {
+                // 1. Call the /join endpoint
+                const response = await fetch(`${API_ENDPOINT}/join`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to join queue');
+                
+                const data = await response.json();
+                const token = data.token;
+                
+                // Store token and switch view
+                sessionStorage.setItem('waiting_room_token', token);
+                tokenDisplay.textContent = token;
+                showWaitingView();
+
+                // 2. Start polling for status
+                statusInterval = setInterval(() => checkStatus(token), 3000); // Check every 3 seconds
+
+            } catch (error) {
+                console.error('Error joining queue:', error);
+                alert('Could not join the queue. Please try again.');
+            }
+        });
+
+        async function checkStatus(token) {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/status?token=${token}`);
+                
+                if (response.status === 404) {
+                    console.log("Token expired or not found. Stopping polling.");
+                    clearInterval(statusInterval);
+                    alert("Your session has expired. Please rejoin the queue.");
+                    showInitialView();
+                    return;
+                }
+
+                if (!response.ok) throw new Error('Status check failed');
+
+                const data = await response.json();
+
+                // 3. Check the status and react
+                if (data.status === 'ALLOWED') {
+                    clearInterval(statusInterval);
+                    showAllowedView();
+                    // Redirect to the actual application after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'https://aws.amazon.com/'; // Dummy redirect
+                    }, 2000);
+                }
+                // If status is still 'WAITING', do nothing and let the interval continue.
+
+            } catch (error) {
+                console.error('Error checking status:', error);
+                // We don't clear interval here, to allow for transient network errors
+            }
+        }
+        
+        function showInitialView() {
+            initialView.classList.remove('hidden');
+            waitingView.classList.add('hidden');
+            allowedView.classList.add('hidden');
+        }
+
+        function showWaitingView() {
+            initialView.classList.add('hidden');
+            waitingView.classList.remove('hidden');
+            allowedView.classList.add('hidden');
+        }
+
+        function showAllowedView() {
+            initialView.classList.add('hidden');
+            waitingView.classList.add('hidden');
+            allowedView.classList.remove('hidden');
+        }
+
+        // Check if user was already waiting on page refresh
+        window.onload = () => {
+            const existingToken = sessionStorage.getItem('waiting_room_token');
+            if (existingToken) {
+                tokenDisplay.textContent = existingToken;
+                showWaitingView();
+                checkStatus(existingToken); // Do an initial check immediately
+                statusInterval = setInterval(() => checkStatus(existingToken), 3000);
+            }
+        };
+
+    </script>
+</body>
+</html>
