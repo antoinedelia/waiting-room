@@ -70,8 +70,10 @@ resource "aws_lambda_function" "gatekeeper_function" {
   function_name = "gatekeeper-function"
   role          = aws_iam_role.gatekeeper_lambda_role.arn
   handler       = "main.lambda_handler"
-  runtime       = "python3.13"
+  runtime       = "python3.12"
   publish       = true # MUST publish a version to use with Lambda@Edge
+
+  layers = ["arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-PyJWT:1"]
 
   filename         = data.archive_file.gatekeeper_lambda_zip.output_path
   source_code_hash = data.archive_file.gatekeeper_lambda_zip.output_base64sha256

@@ -56,7 +56,9 @@ resource "aws_lambda_function" "check_status_function" {
   source_code_hash = data.archive_file.check_status_lambda_zip.output_base64sha256
 
   handler = "main.lambda_handler"
-  runtime = "python3.13"
+  runtime = "python3.12"
+
+  layers = ["arn:aws:lambda:eu-west-1:770693421928:layer:Klayers-p312-PyJWT:1"]
 
   environment {
     variables = {
