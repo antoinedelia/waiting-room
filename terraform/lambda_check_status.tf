@@ -84,5 +84,5 @@ resource "aws_lambda_permission" "api_gateway_invoke_check_status_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.check_status_function.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.waiting_room_api.execution_arn}/*/${aws_apigatewayv2_route.check_status_route.route_key}"
+  source_arn    = "${aws_apigatewayv2_api.waiting_room_api.execution_arn}/*/${replace(aws_apigatewayv2_route.check_status_route.route_key, " ", "")}"
 }
