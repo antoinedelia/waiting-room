@@ -3,6 +3,7 @@ import os
 import time
 
 import boto3
+import jwt
 
 ssm = boto3.client("ssm", region_name="eu-west-1")
 
@@ -12,6 +13,8 @@ with open(config_path) as f:
 
 PARAMETER_NAME = config["ssm_parameter_name"]
 WAITING_ROOM_URL = config["waiting_room_url"]
+JWT_SECRET_KEY = config["jwt_secret_key"]
+PASS_COOKIE_NAME = "waiting-room-pass"
 
 cached_response = {
     "enabled": None,
@@ -52,9 +55,24 @@ def lambda_handler(event, context):
         print("Waiting room is disabled. Passing request to origin.")
         return request
 
-    # --- 3. If Waiting Room is ON, check for a "pass" cookie (to be implemented later) ---
-    # For now, we will just redirect everyone to demonstrate the interception.
-    # In the next step, we would add logic here to check for a valid JWT cookie.
+    # --- 3. If Waiting Room is ON, check for a "pass" cookie ---
+    headers = request.get("headers", {})
+    if "cookie" in headers:
+        for cookie in headers["cookie"][0]["value"].split(";"):
+            if PASS_COOKIE_NAME in cookie:
+                try:
+                    pass_jwt = cookie.strip().split("=")[1]
+                    jwt.decode(pass_jwt, JWT_SECRET_KEY, algorithms=["HS256"])
+                    print("Valid pass cookie found. Allowing request.")
+                    return (
+                        request  # Success! The user has a valid pass. Let them through.
+                    )
+                except jwt.ExpiredSignatureError:
+                    print("Pass cookie has expired. User will be redirected.")
+                    break  # Stop checking cookies and proceed to redirect
+                except Exception as e:
+                    print(f"Invalid pass cookie found: {e}. User will be redirected.")
+                    break  # Stop checking cookies and proceed to redirect
 
     # --- 4. If no "pass" cookie, REDIRECT ---
     print("Waiting room is enabled. Redirecting user to queue.")

@@ -61,6 +61,7 @@ resource "aws_lambda_function" "check_status_function" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.waiting_room_table.name
+      JWT_SECRET_KEY      = random_password.jwt_secret_key.result
     }
   }
 }

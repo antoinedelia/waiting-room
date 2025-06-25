@@ -5,6 +5,7 @@ resource "local_file" "gatekeeper_lambda_config" {
   content = jsonencode({
     ssm_parameter_name = aws_ssm_parameter.waiting_room_enabled.name
     waiting_room_url   = "https://${aws_cloudfront_distribution.waiting_room_distribution.domain_name}"
+    jwt_secret_key     = random_password.jwt_secret_key.result
   })
   filename = "${path.module}/src/gatekeeper_function/config.json"
 }

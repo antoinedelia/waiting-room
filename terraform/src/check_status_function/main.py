@@ -1,11 +1,14 @@
+import datetime
 import json
 import os
 
 import boto3
+import jwt
 
 dynamodb = boto3.resource("dynamodb")
 
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE_NAME")
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 
 
 def lambda_handler(event, context):
@@ -13,7 +16,7 @@ def lambda_handler(event, context):
     Checks the status of a user in the DynamoDB table based on their token.
     The token is expected as a query string parameter.
     """
-    if not TABLE_NAME:
+    if not TABLE_NAME or not JWT_SECRET_KEY:
         return {
             "statusCode": 500,
             "body": json.dumps({"error": "Environment variables not configured."}),
@@ -40,10 +43,21 @@ def lambda_handler(event, context):
         status = item.get("status", "UNKNOWN")
 
         if status == "ALLOWED":
+            payload = {
+                "sub": token,
+                "exp": datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(minutes=5),
+            }
+
+            signed_jwt = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
+
             return {
                 "statusCode": 200,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"status": "ALLOWED"}),
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                },
+                "body": json.dumps({"status": "ALLOWED", "jwt": signed_jwt}),
             }
 
         if status == "WAITING":

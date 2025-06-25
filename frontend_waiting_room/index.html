@@ -65,7 +65,6 @@
         <div id="waiting-view" class="hidden">
             <h1 class="text-2xl font-bold text-slate-800 mb-4">You are in the queue</h1>
             <p class="text-slate-600 mb-6">Please wait, we will let you in shortly. Thank you for your patience.</p>
-            <!-- Position Display -->
             <div id="position-container" class="my-6">
                 <p class="text-lg text-slate-700">Your position in queue is:</p>
                 <p id="position-display" class="text-4xl font-bold text-indigo-600">...</p>
@@ -88,6 +87,7 @@
 
     <script>
         const API_ENDPOINT = 'https://c305xzvm7c.execute-api.eu-west-1.amazonaws.com/v1'; 
+        const MAIN_WEBSITE_URL = 'https://d194b0tdplekli.cloudfront.net/'; 
 
         const initialView = document.getElementById('initial-view');
         const waitingView = document.getElementById('waiting-view');
@@ -96,6 +96,17 @@
         const tokenDisplay = document.getElementById('token-display');
         const positionDisplay = document.getElementById('position-display');
         let statusInterval;
+
+        function setCookie(name, value, minutes) {
+            let expires = "";
+            if (minutes) {
+                const date = new Date();
+                date.setTime(date.getTime() + (minutes * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            // Set the cookie on the root path so it's accessible by the main site's domain
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
 
         joinButton.addEventListener('click', async () => {
              try {
@@ -109,8 +120,8 @@
                 tokenDisplay.textContent = token;
                 showWaitingView();
 
-                // Start polling for status
-                statusInterval = setInterval(() => checkStatus(token), 5000); // Check every 5 seconds
+                statusInterval = setInterval(() => checkStatus(token), 5000);
+                checkStatus(token);
 
             } catch (error) {
                 console.error('Error joining queue:', error);
@@ -123,23 +134,23 @@
                 const response = await fetch(`${API_ENDPOINT}/status?token=${token}`);
                 
                 if (response.status === 404) {
-                    console.log("Token expired or not found. Stopping polling.");
                     clearInterval(statusInterval);
                     alert("Your session has expired. Please rejoin the queue.");
                     showInitialView();
                     return;
                 }
-
                 if (!response.ok) throw new Error('Status check failed');
 
                 const data = await response.json();
 
                 if (data.status === 'ALLOWED') {
                     clearInterval(statusInterval);
+                    
+                    setCookie('waiting-room-pass', data.jwt, 5); // Cookie is valid for 5 minutes
+
                     showAllowedView();
-                    setTimeout(() => {
-                        window.location.href = 'https://d194b0tdplekli.cloudfront.net/'; // Dummy redirect
-                    }, 2000);
+                    setTimeout(() => { window.location.href = MAIN_WEBSITE_URL; }, 2000);
+
                 } else if (data.status === 'WAITING') {
                     positionDisplay.textContent = data.position;
                 }
@@ -171,7 +182,7 @@
             if (existingToken) {
                 tokenDisplay.textContent = existingToken;
                 showWaitingView();
-                checkStatus(existingToken); // Do an initial check immediately
+                checkStatus(existingToken);
                 statusInterval = setInterval(() => checkStatus(existingToken), 5000);
             }
         };
