@@ -76,5 +76,5 @@ resource "aws_cloudfront_distribution" "main_website_distribution" {
 
 output "main_website_url" {
   description = "The URL for the main website."
-  value       = "https://${aws_cloudfront_distribution.waiting_room_distribution.domain_name}"
+  value       = "https://${aws_cloudfront_distribution.main_website_distribution.domain_name}"
 }
