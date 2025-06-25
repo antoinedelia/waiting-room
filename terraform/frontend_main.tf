@@ -53,7 +53,7 @@ resource "aws_cloudfront_distribution" "main_website_distribution" {
     viewer_protocol_policy = "redirect-to-https"
 
     forwarded_values {
-      query_string = false
+      query_string = true
       headers      = ["Origin"]
 
       cookies {

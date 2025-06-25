@@ -149,6 +149,10 @@
                     setCookie('waiting-room-pass', data.jwt, 5); // Cookie is valid for 5 minutes
 
                     showAllowedView();
+
+                    const redirectUrl = new URL(MAIN_WEBSITE_URL);
+                    redirectUrl.searchParams.set('pass_token', data.jwt);
+
                     setTimeout(() => { window.location.href = MAIN_WEBSITE_URL; }, 2000);
 
                 } else if (data.status === 'WAITING') {
